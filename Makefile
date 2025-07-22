@@ -21,7 +21,7 @@ service = api
 logs:
 	docker compose logs -f $(service)
 
-# Test
+# ===== TEST =====
 .PHONY: unit-test
 unit-test:
 	go test ./internal/...
