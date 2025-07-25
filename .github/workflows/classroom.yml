@@ -49,15 +49,19 @@ jobs:
         run: go test -v ./internal/gateway/...
 
   api_test:
-    name: Autograding
+    name: API Test
     needs: [ unit_test ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: docker/setup-buildx-action@v2
+      - name: Set up QEMU for Docker build
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build images
         timeout-minutes: 10
@@ -78,11 +82,40 @@ jobs:
           SERVICE_NAME: payment-api
           PORT_NUMBER: 8050
 
-      - uses: education/autograding@v1
-        id: autograder
-        continue-on-error: true
-
       - name: Stop containers
         if: always()
         continue-on-error: true
         run: docker compose down -v
+
+  push_images:
+    needs: [ api_test ]
+    name: Push images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for Docker build
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build images
+        timeout-minutes: 10
+        run: docker compose build
+
+      - name: Login to docker registry
+        run: docker login -u ${{ secrets.DOCKERHUB_LOGIN }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Push images
+        timeout-minutes: 10
+        run: |
+          docker push slavashagalov/car-rental-gateway:latest
+          docker push slavashagalov/car-rental-retryer:latest
+          docker push slavashagalov/car-rental-cars-api:latest
+          docker push slavashagalov/car-rental-rental-api:latest
+          docker push slavashagalov/car-rental-payment-api:latest
+
+      - name: Logout from docker registry
+        run: docker logout

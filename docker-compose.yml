@@ -40,6 +40,7 @@ services:
         MODE: without_migrations
       platforms:
         - "linux/amd64"
+    image: slavashagalov/car-rental-retryer:latest
     restart: always
   gateway:
     container_name: gateway
@@ -52,6 +53,7 @@ services:
         MODE: without_migrations
       platforms:
         - "linux/amd64"
+    image: slavashagalov/car-rental-gateway:latest
     restart: always
     ports:
       - "8080:8080"
@@ -66,6 +68,7 @@ services:
         PIPELINE_ID: ${PIPELINE_ID}
       platforms:
         - "linux/amd64"
+    image: slavashagalov/car-rental-cars-api:latest
     restart: always
     ports:
       - "8070:8080"
@@ -80,6 +83,7 @@ services:
         PIPELINE_ID: ${PIPELINE_ID}
       platforms:
         - "linux/amd64"
+    image: slavashagalov/car-rental-rental-api:latest
     restart: always
     ports:
       - "8060:8080"
@@ -94,6 +98,7 @@ services:
         PIPELINE_ID: ${PIPELINE_ID}
       platforms:
         - "linux/amd64"
+    image: slavashagalov/car-rental-payment-api:latest
     restart: always
     ports:
       - "8050:8080"
