@@ -44,7 +44,21 @@ helm upgrade cars-api gruntwork/k8s-service -f k8s/deployments/api-services/cars
 ```
 
 ```shell
+helm upgrade rental-api gruntwork/k8s-service -f k8s/deployments/api-services/rental.yaml --install --wait --atomic
+```
+
+```shell
+helm upgrade payment-api gruntwork/k8s-service -f k8s/deployments/api-services/payment.yaml --install --wait --atomic
+```
+
+```shell
 helm upgrade gateway gruntwork/k8s-service -f k8s/deployments/api-services/gateway.yaml --install --wait --atomic
+```
+
+Port Forward for gateway
+
+```shell
+kubectl -n default port-forward svc/gateway 8080:80
 ```
 
 ### Kubernetes Dashboard
