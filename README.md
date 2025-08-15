@@ -1,2 +1,80 @@
 # car-rental
+
 Бэкенд сервиса аренды машин
+
+# Deploy
+
+## Used charts
+
+### Postgres
+
+Chart - https://artifacthub.io/packages/helm/bitnami/postgresql
+
+Config - https://github.com/bitnami/charts/blob/main/bitnami/postgresql/values.yaml
+
+```shell
+helm upgrade postgres oci://registry-1.docker.io/bitnamicharts/postgresql -f k8s/deployments/postgres/values.yaml --install --wait --atomic
+```
+
+### Kafka
+
+Chart - https://artifacthub.io/packages/helm/bitnami/kafka
+
+Config - https://github.com/bitnami/charts/blob/main/bitnami/kafka/values.yaml
+
+```shell
+helm upgrade kafka oci://registry-1.docker.io/bitnamicharts/kafka -f k8s/deployments/kafka/values.yaml --install --wait --atomic
+```
+
+### API Services
+
+Chart - https://github.com/gruntwork-io/helm-kubernetes-services
+
+Config - https://github.com/gruntwork-io/helm-kubernetes-services/blob/main/charts/k8s-service/values.yaml
+
+Preparation
+
+```shell
+helm repo add gruntwork https://helmcharts.gruntwork.io
+helm repo update
+```
+
+```shell
+helm upgrade cars-api gruntwork/k8s-service -f k8s/deployments/api-services/cars.yaml --install --wait --atomic
+```
+
+```shell
+helm upgrade gateway gruntwork/k8s-service -f k8s/deployments/api-services/gateway.yaml --install --wait --atomic
+```
+
+### Kubernetes Dashboard
+
+Preparation
+
+```shell
+helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+helm repo update
+```
+
+Up
+
+```shell
+helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+```
+
+Port Forward for dashboard
+
+```shell
+kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+```
+
+Get token
+
+```shell
+kubectl apply -f k8s/access-control/create-user.yaml
+kubectl apply -f k8s/access-control/bind-user-to-role.yaml  
+```
+
+```shell
+kubectl -n kubernetes-dashboard create token admin
+```
