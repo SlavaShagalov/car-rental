@@ -61,6 +61,22 @@ Port Forward for gateway
 kubectl -n default port-forward svc/gateway 8080:80
 ```
 
+### Ingress Controller
+
+```shell
+# Install nginx ingress controller
+minikube addons enable ingress
+```
+
+```shell
+# Get url to do requests
+minikube service ingress-nginx-controller --url -n ingress-nginx
+
+# Or use
+minikube tunnel
+# And do requests to http://127.0.0.1
+```
+
 ### Kubernetes Dashboard
 
 Preparation
