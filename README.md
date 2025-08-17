@@ -55,6 +55,10 @@ helm upgrade payment-api gruntwork/k8s-service -f k8s/deployments/api-services/p
 helm upgrade gateway gruntwork/k8s-service -f k8s/deployments/api-services/gateway.yaml --install --wait --atomic
 ```
 
+```shell
+helm upgrade retryer gruntwork/k8s-service -f k8s/deployments/api-services/retryer.yaml --install --wait --atomic
+```
+
 Port Forward for gateway
 
 ```shell
