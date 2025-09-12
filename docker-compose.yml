@@ -42,6 +42,19 @@ services:
         - "linux/amd64"
     image: slavashagalov/car-rental-retryer:latest
     restart: always
+#  statistics:
+#    container_name: statistics
+#    build:
+#      context: .
+#      args:
+#        MAIN_PATH: ./cmd/statistics/main.go
+#        CONFIG_PATH: ./configs/statistics.yaml
+#        PIPELINE_ID: ${PIPELINE_ID}
+#        MODE: without_migrations
+#      platforms:
+#        - "linux/amd64"
+#    image: slavashagalov/car-rental-statistics:latest
+#    restart: always
   gateway:
     container_name: gateway
     build:
@@ -57,6 +70,21 @@ services:
     restart: always
     ports:
       - "8080:8080"
+  auth:
+    container_name: auth
+    build:
+      context: .
+      args:
+        MAIN_PATH: ./cmd/auth/main.go
+        CONFIG_PATH: ./configs/auth.yaml
+        MIGRATIONS_FOLDER: ./migrations/user
+        PIPELINE_ID: ${PIPELINE_ID}
+      platforms:
+        - "linux/amd64"
+    image: slavashagalov/car-rental-auth:latest
+    restart: always
+    ports:
+      - "8010:8080"
   cars-api:
     container_name: cars-api
     build:

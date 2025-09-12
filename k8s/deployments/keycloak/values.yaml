@@ -1,0 +1,10 @@
+replicaCount: 1
+
+#postgresql:
+#  enabled: false
+#externalDatabase:
+#  host: postgres
+#  user: keycloak
+#  password: keycloakpass
+#  database: keycloakdb
+#  port: 5432

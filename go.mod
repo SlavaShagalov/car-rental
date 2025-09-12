@@ -4,7 +4,9 @@ go 1.24.3
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang-migrate/migrate/v4 v4.18.3
+	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jmoiron/sqlx v1.4.0
@@ -21,6 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.7
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/multierr v1.11.0
+	golang.org/x/crypto v0.36.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

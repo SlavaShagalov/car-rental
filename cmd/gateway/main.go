@@ -82,7 +82,13 @@ func main() {
 		paymentAPI.New(config.PaymentApiAddr, http.DefaultClient, requestBacklog, config.MaxRequestFails, logger),
 		logger,
 	)
-	webApp := app.NewFiberApp(config.Web, delivery, logger)
+
+	auth, err := app.NewAuth(config.Web.JWKsURL, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	webApp := app.NewFiberApp(config.Web, delivery, auth, logger)
 
 	startApp(webApp, config, logger)
 	shutdownApp(webApp, logger)

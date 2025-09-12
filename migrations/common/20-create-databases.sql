@@ -6,3 +6,6 @@ GRANT ALL ON DATABASE rentals TO program;
 
 CREATE DATABASE payments;
 GRANT ALL ON DATABASE payments TO program;
+
+CREATE DATABASE users;
+GRANT ALL ON DATABASE users TO program;

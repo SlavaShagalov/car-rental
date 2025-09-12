@@ -87,7 +87,13 @@ func main() {
 
 	repo := repository.NewSqlxRepository(db, logger)
 	useCase := usecase.New(repo, logger)
-	webApp := app.NewFiberApp(config.Web, delivery.New(useCase, logger), logger)
+
+	auth, err := app.NewAuth(config.Web.JWKsURL, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	webApp := app.NewFiberApp(config.Web, delivery.New(useCase, logger), auth, logger)
 
 	startApp(webApp, config, logger)
 	shutdownApp(webApp, logger)

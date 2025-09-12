@@ -43,3 +43,4 @@ service:
 
 envVars:
   WEB_PORT: 80
+  WEB_JWKsURL: http://keycloak/realms/ds-labs/protocol/openid-connect/certs

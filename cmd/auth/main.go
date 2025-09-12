@@ -3,22 +3,25 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/SlavaShagalov/car-rental/internal/car/delivery"
-	"github.com/SlavaShagalov/car-rental/internal/car/repository"
-	"github.com/SlavaShagalov/car-rental/internal/car/usecase"
-	"github.com/SlavaShagalov/car-rental/internal/pkg/app"
-	"github.com/SlavaShagalov/car-rental/pkg/migrations"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/lmittmann/tint"
 	"github.com/spf13/pflag"
-	"log/slog"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+
+	"github.com/SlavaShagalov/car-rental/internal/auth/delivery"
+	"github.com/SlavaShagalov/car-rental/internal/auth/repository"
+	"github.com/SlavaShagalov/car-rental/internal/auth/usecase"
+	"github.com/SlavaShagalov/car-rental/internal/pkg/app"
+	pHasher "github.com/SlavaShagalov/car-rental/internal/pkg/hasher/bcrypt"
+	"github.com/SlavaShagalov/car-rental/pkg/migrations"
 )
 
 type WebApp interface {
@@ -57,7 +60,7 @@ func shutdownApp(webApp WebApp, logger *slog.Logger) {
 
 func main() {
 	var configPath, migrationsPath string
-	pflag.StringVarP(&configPath, "config", "c", "configs/cars.yaml", "Config file path")
+	pflag.StringVarP(&configPath, "config", "c", "configs/auth.yaml", "Config file path")
 	pflag.StringVarP(&migrationsPath, "migrations", "", "migrations", "Migrations directory path")
 	pflag.Parse()
 
@@ -85,8 +88,10 @@ func main() {
 		panic(err)
 	}
 
+	hasher := pHasher.New()
+
 	repo := repository.NewSqlxRepository(db, logger)
-	useCase := usecase.New(repo, logger)
+	useCase := usecase.New(repo, logger, hasher)
 
 	auth, err := app.NewAuth(config.Web.JWKsURL, logger)
 	if err != nil {

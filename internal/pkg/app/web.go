@@ -2,15 +2,17 @@ package app
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/pprof"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/pkg/errors"
-	slogfiber "github.com/samber/slog-fiber"
 	"log/slog"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/pkg/errors"
+	slogfiber "github.com/samber/slog-fiber"
 )
 
 type HealthChecker interface {
@@ -18,7 +20,7 @@ type HealthChecker interface {
 }
 
 type Delivery interface {
-	HealthChecker
+	HealthCheck(ctx context.Context) error
 	AddHandlers(router fiber.Router)
 }
 
@@ -26,6 +28,7 @@ type WebConfig struct {
 	Host       string
 	Port       string
 	PathPrefix string
+	JWKsURL    string
 }
 
 type FiberApp struct {
@@ -49,7 +52,7 @@ func checkReadiness(delivery HealthChecker) func(ctx *fiber.Ctx) error {
 	}
 }
 
-func NewFiberApp(config WebConfig, delivery Delivery, logger *slog.Logger) *FiberApp {
+func NewFiberApp(config WebConfig, delivery Delivery, auth fiber.Handler, logger *slog.Logger) *FiberApp {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
@@ -65,13 +68,30 @@ func NewFiberApp(config WebConfig, delivery Delivery, logger *slog.Logger) *Fibe
 		},
 	})
 
+	// Настройка CORS ДО других middleware
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://127.0.0.1:8010,http://localhost:8080,http://localhost:8070,http://localhost:8060,http://localhost:8050,http://localhost:8010",
+		//AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+		//AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "*",
+		AllowCredentials: true,
+		MaxAge:           86400, // 1 час
+	}))
+
 	app.Use(recover.New())
 	app.Use(slogfiber.New(logger))
 	app.Use(pprof.New())
 
 	app.Get("/manage/health", checkReadiness(delivery))
 
-	delivery.AddHandlers(app.Group(config.PathPrefix))
+	api := app.Group(config.PathPrefix)
+
+	if auth != nil {
+		api.Use(auth)
+	}
+
+	delivery.AddHandlers(api)
 
 	return &FiberApp{
 		config: config,

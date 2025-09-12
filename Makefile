@@ -1,11 +1,13 @@
 # ===== RUN =====
 .PHONY: build
 build:
-	docker compose -f docker-compose.yml build retryer gateway cars-api rental-api payment-api
+	#docker compose -f docker-compose.yml build retryer gateway cars-api rental-api payment-api
+	docker compose -f docker-compose.yml build gateway auth
 
 .PHONY: up
 up:
-	docker compose -f docker-compose.yml up -d --build postgres kafka retryer gateway cars-api rental-api payment-api
+	#docker compose -f docker-compose.yml up -d --build postgres kafka retryer gateway cars-api rental-api payment-api
+	docker compose -f docker-compose.yml up -d --build postgres kafka gateway auth
 
 .PHONY: stop
 stop:

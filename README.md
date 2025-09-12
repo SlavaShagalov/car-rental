@@ -22,9 +22,31 @@ Chart - https://artifacthub.io/packages/helm/bitnami/kafka
 
 Config - https://github.com/bitnami/charts/blob/main/bitnami/kafka/values.yaml
 
+### Keycloak
+
+Документация - https://www.keycloak.org/getting-started/getting-started-kube
+
+Chart - https://artifacthub.io/packages/helm/bitnami/keycloak
+
+Config - https://github.com/bitnami/charts/blob/main/bitnami/keycloak/values.yaml
+
 ```shell
-helm upgrade kafka oci://registry-1.docker.io/bitnamicharts/kafka -f k8s/deployments/kafka/values.yaml --install --wait --atomic
+helm upgrade keycloak oci://registry-1.docker.io/bitnamicharts/keycloak -f k8s/deployments/keycloak/values.yaml --install --wait --atomic
 ```
+
+```shell
+kubectl port-forward svc/keycloak 8080:80
+```
+
+```shell
+kubectl get secret keycloak -o jsonpath='{.data.admin-password}' | base64 --decode
+
+# Log in: user=user, password=<from command>
+```
+
+1. Создать realm car-rental-realm
+2. Создать клиент car-rental-client
+3. 
 
 ### API Services
 
