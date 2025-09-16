@@ -42,19 +42,19 @@ services:
         - "linux/amd64"
     image: slavashagalov/car-rental-retryer:latest
     restart: always
-#  statistics:
-#    container_name: statistics
-#    build:
-#      context: .
-#      args:
-#        MAIN_PATH: ./cmd/statistics/main.go
-#        CONFIG_PATH: ./configs/statistics.yaml
-#        PIPELINE_ID: ${PIPELINE_ID}
-#        MODE: without_migrations
-#      platforms:
-#        - "linux/amd64"
-#    image: slavashagalov/car-rental-statistics:latest
-#    restart: always
+  #  statistics:
+  #    container_name: statistics
+  #    build:
+  #      context: .
+  #      args:
+  #        MAIN_PATH: ./cmd/statistics/main.go
+  #        CONFIG_PATH: ./configs/statistics.yaml
+  #        PIPELINE_ID: ${PIPELINE_ID}
+  #        MODE: without_migrations
+  #      platforms:
+  #        - "linux/amd64"
+  #    image: slavashagalov/car-rental-statistics:latest
+  #    restart: always
   gateway:
     container_name: gateway
     build:
@@ -64,8 +64,6 @@ services:
         CONFIG_PATH: ./configs/gateway.yaml
         PIPELINE_ID: ${PIPELINE_ID}
         MODE: without_migrations
-      platforms:
-        - "linux/amd64"
     image: slavashagalov/car-rental-gateway:latest
     restart: always
     ports:
@@ -79,8 +77,6 @@ services:
         CONFIG_PATH: ./configs/auth.yaml
         MIGRATIONS_FOLDER: ./migrations/user
         PIPELINE_ID: ${PIPELINE_ID}
-      platforms:
-        - "linux/amd64"
     image: slavashagalov/car-rental-auth:latest
     restart: always
     ports:
@@ -94,8 +90,6 @@ services:
         CONFIG_PATH: ./configs/cars.yaml
         MIGRATIONS_FOLDER: ./migrations/car
         PIPELINE_ID: ${PIPELINE_ID}
-      platforms:
-        - "linux/amd64"
     image: slavashagalov/car-rental-cars-api:latest
     restart: always
     ports:
@@ -109,8 +103,6 @@ services:
         CONFIG_PATH: ./configs/rental.yaml
         MIGRATIONS_FOLDER: ./migrations/rental
         PIPELINE_ID: ${PIPELINE_ID}
-      platforms:
-        - "linux/amd64"
     image: slavashagalov/car-rental-rental-api:latest
     restart: always
     ports:
@@ -124,8 +116,6 @@ services:
         CONFIG_PATH: ./configs/payment.yaml
         MIGRATIONS_FOLDER: ./migrations/payment
         PIPELINE_ID: ${PIPELINE_ID}
-      platforms:
-        - "linux/amd64"
     image: slavashagalov/car-rental-payment-api:latest
     restart: always
     ports:

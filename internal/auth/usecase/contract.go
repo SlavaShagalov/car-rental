@@ -15,6 +15,7 @@ type SignUpParams struct {
 	Username string
 	Email    string
 	Password string
+	Role     string
 }
 
 type CreateParams struct {
@@ -22,6 +23,7 @@ type CreateParams struct {
 	Username       string
 	Email          string
 	HashedPassword string
+	Role           string
 }
 
 type Repository interface {
@@ -29,4 +31,5 @@ type Repository interface {
 
 	Create(ctx context.Context, params CreateParams) (models.User, error)
 	GetByUsername(ctx context.Context, username string) (models.User, error)
+	GetByID(ctx context.Context, id int) (models.User, error)
 }

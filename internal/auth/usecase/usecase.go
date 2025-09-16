@@ -47,6 +47,7 @@ func (u *UseCase) SignUp(ctx context.Context, params SignUpParams) (models.User,
 		Name:           params.Name,
 		Username:       params.Username,
 		Email:          params.Email,
+		Role:           params.Role,
 		HashedPassword: hashedPassword,
 	}
 
@@ -71,4 +72,14 @@ func (u *UseCase) SignIn(ctx context.Context, params SignInParams) (models.User,
 
 	// TODO: token
 	return user, "token", nil
+}
+
+func (u *UseCase) GetByID(ctx context.Context, id int) (models.User, error) {
+	user, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	// TODO: token
+	return user, nil
 }
