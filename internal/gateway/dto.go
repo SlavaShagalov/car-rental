@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"github.com/SlavaShagalov/car-rental/internal/models"
+	"github.com/SlavaShagalov/car-rental/internal/requests/repository"
 	"time"
 )
 
@@ -123,6 +124,32 @@ func NewRentalsDTO(rentals []models.Rental, cars map[string]models.Car, payments
 
 	for i := range rentals {
 		items = append(items, NewRentalDTO(rentals[i], cars[rentals[i].CarUID], payments[i]))
+	}
+
+	return items
+}
+
+type RequestDTO struct {
+	Method  string `json:"method"`
+	URL     string `json:"url"`
+	Body    string `json:"body"`
+	Headers string `json:"headers"`
+}
+
+func NewRequestDTO(req repository.Request) RequestDTO {
+	return RequestDTO{
+		Method:  req.Method,
+		URL:     req.URL,
+		Body:    req.Body,
+		Headers: req.Headers,
+	}
+}
+
+func NewRequestsDTO(reqs []repository.Request) []RequestDTO {
+	items := make([]RequestDTO, 0, len(reqs))
+
+	for i := range reqs {
+		items = append(items, NewRequestDTO(reqs[i]))
 	}
 
 	return items

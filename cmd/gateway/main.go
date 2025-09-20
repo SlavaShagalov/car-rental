@@ -8,7 +8,13 @@ import (
 	paymentAPI "github.com/SlavaShagalov/car-rental/internal/payment/api"
 	"github.com/SlavaShagalov/car-rental/internal/pkg/app"
 	rentalAPI "github.com/SlavaShagalov/car-rental/internal/rental/api"
+	"github.com/SlavaShagalov/car-rental/internal/requests/repository"
 	"github.com/SlavaShagalov/car-rental/pkg/retryer"
+	"github.com/SlavaShagalov/car-rental/pkg/statistics"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/lmittmann/tint"
 	"github.com/segmentio/kafka-go"
 	"github.com/spf13/pflag"
@@ -66,6 +72,20 @@ func main() {
 
 	logger := slog.New(tint.NewHandler(os.Stdout, &tint.Options{Level: slog.Level(config.Logging.Level)}))
 
+	db, err := sqlx.Connect(config.DB.DriverName, config.DB.ConnectionString)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func(db *sqlx.DB) {
+		err = db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(db)
+
+	repo := repository.NewSqlxRepository(db, logger)
+
 	kafkaWriter := &kafka.Writer{
 		Addr:                   kafka.TCP(config.Kafka.Addresses...),
 		Topic:                  config.Kafka.Topic,
@@ -74,13 +94,23 @@ func main() {
 	}
 	defer kafkaWriter.Close()
 
+	kafkaStatWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(config.Kafka.Addresses...),
+		Topic:                  config.Kafka.StatTopic,
+		Balancer:               &kafka.LeastBytes{},
+		AllowAutoTopicCreation: true,
+	}
+	defer kafkaStatWriter.Close()
+
 	requestBacklog := retryer.NewKafkaRequestBacklog(nil, kafkaWriter, logger)
+	stat := statistics.NewKafkaStatistics(nil, kafkaStatWriter, logger, nil)
 
 	delivery := gateway.New(
 		carAPI.New(config.CarsApiAddr, http.DefaultClient, requestBacklog, config.MaxRequestFails, logger),
 		rentalAPI.New(config.RentalApiAddr, http.DefaultClient, requestBacklog, config.MaxRequestFails, logger),
 		paymentAPI.New(config.PaymentApiAddr, http.DefaultClient, requestBacklog, config.MaxRequestFails, logger),
 		logger,
+		repo,
 	)
 
 	auth, err := app.NewAuth(config.Web.JWKsURL, logger)
@@ -88,7 +118,12 @@ func main() {
 		panic(err)
 	}
 
-	webApp := app.NewFiberApp(config.Web, delivery, auth, logger)
+	statisticsMW, err := app.NewStatisticsMW(stat, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	webApp := app.NewFiberApp(config.Web, delivery, statisticsMW, auth, logger)
 
 	startApp(webApp, config, logger)
 	shutdownApp(webApp, logger)

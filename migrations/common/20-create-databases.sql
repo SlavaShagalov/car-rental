@@ -9,3 +9,6 @@ GRANT ALL ON DATABASE payments TO program;
 
 CREATE DATABASE users;
 GRANT ALL ON DATABASE users TO program;
+
+CREATE DATABASE requests;
+GRANT ALL ON DATABASE users TO program;

@@ -38,23 +38,19 @@ services:
         CONFIG_PATH: ./configs/retryer.yaml
         PIPELINE_ID: ${PIPELINE_ID}
         MODE: without_migrations
-      platforms:
-        - "linux/amd64"
     image: slavashagalov/car-rental-retryer:latest
     restart: always
-  #  statistics:
-  #    container_name: statistics
-  #    build:
-  #      context: .
-  #      args:
-  #        MAIN_PATH: ./cmd/statistics/main.go
-  #        CONFIG_PATH: ./configs/statistics.yaml
-  #        PIPELINE_ID: ${PIPELINE_ID}
-  #        MODE: without_migrations
-  #      platforms:
-  #        - "linux/amd64"
-  #    image: slavashagalov/car-rental-statistics:latest
-  #    restart: always
+  statistics:
+    container_name: statistics
+    build:
+      context: .
+      args:
+        MAIN_PATH: ./cmd/statistics/main.go
+        CONFIG_PATH: ./configs/statistics.yaml
+        MIGRATIONS_FOLDER: ./migrations/requests
+        PIPELINE_ID: ${PIPELINE_ID}
+    image: slavashagalov/car-rental-statistics:latest
+    restart: always
   gateway:
     container_name: gateway
     build:

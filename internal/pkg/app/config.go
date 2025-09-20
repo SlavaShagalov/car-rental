@@ -19,6 +19,7 @@ type Config struct {
 	Kafka struct {
 		Addresses []string
 		Topic     string
+		StatTopic string
 	}
 	CarsApiAddr     string
 	RentalApiAddr   string

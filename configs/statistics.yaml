@@ -4,3 +4,6 @@ kafka:
   addresses:
     - kafka:9092
   topic: "statistics"
+db:
+  driverName: postgres
+  connectionString: postgres://program:test@postgres:5432/requests?sslmode=disable

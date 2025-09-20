@@ -93,7 +93,7 @@ func main() {
 		panic(err)
 	}
 
-	webApp := app.NewFiberApp(config.Web, delivery.New(useCase, logger), auth, logger)
+	webApp := app.NewFiberApp(config.Web, delivery.New(useCase, logger), nil, auth, logger)
 
 	startApp(webApp, config, logger)
 	shutdownApp(webApp, logger)

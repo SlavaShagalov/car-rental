@@ -8,6 +8,7 @@ import (
 	paymentErrors "github.com/SlavaShagalov/car-rental/internal/payment/delivery/errors"
 	"github.com/SlavaShagalov/car-rental/internal/pkg/app"
 	rentalErrors "github.com/SlavaShagalov/car-rental/internal/rental/delivery/errors"
+	"github.com/SlavaShagalov/car-rental/internal/requests/repository"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/multierr"
 	"log/slog"
@@ -44,14 +45,16 @@ type Gateway struct {
 	rentalsAPI  RentalsAPI
 	paymentsAPI PaymentsAPI
 	logger      *slog.Logger
+	repo        *repository.SqlxRepository
 }
 
-func New(carsAPI CarsAPI, rentalsAPI RentalsAPI, paymentsAPI PaymentsAPI, logger *slog.Logger) app.Delivery {
+func New(carsAPI CarsAPI, rentalsAPI RentalsAPI, paymentsAPI PaymentsAPI, logger *slog.Logger, repo *repository.SqlxRepository) app.Delivery {
 	return &Gateway{
 		carsAPI:     carsAPI,
 		rentalsAPI:  rentalsAPI,
 		paymentsAPI: paymentsAPI,
 		logger:      logger,
+		repo:        repo,
 	}
 }
 
@@ -70,6 +73,8 @@ func (gateway *Gateway) AddHandlers(router fiber.Router) {
 	router.Get("/rental/:rentalUID", gateway.getRental)
 	router.Post("/rental/:rentalUID/finish", gateway.finishCarRental)
 	router.Delete("/rental/:rentalUID", gateway.cancelCarRental)
+
+	router.Get("/statistics", gateway.getStatistics)
 }
 
 func (gateway *Gateway) getCars(ctx *fiber.Ctx) error {
@@ -342,4 +347,13 @@ func (gateway *Gateway) finishCarRental(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+func (gateway *Gateway) getStatistics(ctx *fiber.Ctx) error {
+	reqs, err := gateway.repo.GetRequests(ctx.Context())
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(NewRequestsDTO(reqs))
 }

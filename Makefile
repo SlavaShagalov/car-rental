@@ -6,8 +6,8 @@ build:
 
 .PHONY: up
 up:
-	#docker compose -f docker-compose.yml up -d --build postgres kafka retryer gateway cars-api rental-api payment-api
-	docker compose -f docker-compose.yml up -d --build postgres kafka gateway auth
+	docker compose -f docker-compose.yml up -d --build postgres kafka retryer gateway auth statistics cars-api rental-api payment-api
+	#docker compose -f docker-compose.yml up -d --build postgres kafka gateway auth
 
 .PHONY: stop
 stop:

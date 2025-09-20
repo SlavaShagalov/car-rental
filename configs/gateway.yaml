@@ -8,6 +8,10 @@ kafka:
   addresses:
     - kafka:9092
   topic: "backlog.requests.http"
+  statTopic: "statistics"
+db:
+  driverName: postgres
+  connectionString: postgres://program:test@postgres:5432/requests?sslmode=disable
 carsApiAddr: http://cars-api:8080
 rentalApiAddr: http://rental-api:8080
 paymentApiAddr: http://payment-api:8080

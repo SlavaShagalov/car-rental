@@ -52,7 +52,7 @@ func checkReadiness(delivery HealthChecker) func(ctx *fiber.Ctx) error {
 	}
 }
 
-func NewFiberApp(config WebConfig, delivery Delivery, auth fiber.Handler, logger *slog.Logger) *FiberApp {
+func NewFiberApp(config WebConfig, delivery Delivery, statisticsMW fiber.Handler, auth fiber.Handler, logger *slog.Logger) *FiberApp {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
@@ -89,6 +89,10 @@ func NewFiberApp(config WebConfig, delivery Delivery, auth fiber.Handler, logger
 
 	if auth != nil {
 		api.Use(auth)
+	}
+
+	if statisticsMW != nil {
+		api.Use(statisticsMW)
 	}
 
 	delivery.AddHandlers(api)
