@@ -28,6 +28,10 @@ func NewStatisticsMW(stat *statistics.KafkaStatistics, logger *slog.Logger) (fib
 			Headers: headersStr,
 		}
 
+		if req.URL == "/api/v1/statistics" {
+			return ctx.Next()
+		}
+
 		err := stat.Push(ctx.Context(), req)
 		if err != nil {
 			logger.Error("ERROR", err.Error())
