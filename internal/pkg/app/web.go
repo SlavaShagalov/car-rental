@@ -70,7 +70,7 @@ func NewFiberApp(config WebConfig, delivery Delivery, auth fiber.Handler, logger
 
 	// Настройка CORS ДО других middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://127.0.0.1:8010,http://localhost:8080,http://localhost:8070,http://localhost:8060,http://localhost:8050,http://localhost:8010",
+		AllowOrigins: "http://localhost:5173,http://127.0.0.1:8010,http://localhost:8080,http://localhost:8070,http://localhost:8060,http://localhost:8050,http://localhost:8010",
 		//AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
 		//AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
