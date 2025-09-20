@@ -3,8 +3,8 @@ package delivery
 import (
 	"context"
 
-	"github.com/SlavaShagalov/car-rental/internal/auth/usecase"
 	"github.com/SlavaShagalov/car-rental/internal/models"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/usecase"
 	"github.com/SlavaShagalov/car-rental/internal/pkg/app"
 )
 

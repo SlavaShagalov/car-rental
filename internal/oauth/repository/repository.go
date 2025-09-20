@@ -8,8 +8,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 
-	"github.com/SlavaShagalov/car-rental/internal/auth/usecase"
 	"github.com/SlavaShagalov/car-rental/internal/models"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/usecase"
 	pkgErrors "github.com/SlavaShagalov/car-rental/internal/pkg/errors"
 )
 

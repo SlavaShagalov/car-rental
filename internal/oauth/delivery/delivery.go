@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
 	"github.com/SlavaShagalov/car-rental/internal/models"
@@ -12,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SlavaShagalov/car-rental/internal/auth/delivery/errors"
-	"github.com/SlavaShagalov/car-rental/internal/auth/usecase"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/delivery/errors"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/usecase"
 )
 
 // Authorization code хранилище
@@ -23,7 +24,6 @@ type AuthCode struct {
 	RedirectURI string
 	UserID      int
 	Scope       string
-	Nonce       string
 	CreatedAt   time.Time
 	ExpiresAt   time.Time
 }
@@ -34,21 +34,18 @@ var (
 
 // Сессия авторизации
 type AuthSession struct {
-	ID                  string
-	ClientID            string
-	RedirectURI         string
-	Scope               string
-	State               string
-	Nonce               string
-	CodeChallenge       string
-	CodeChallengeMethod string
-	CreatedAt           time.Time
-	UserID              int
+	ID          string
+	ClientID    string
+	RedirectURI string
+	Scope       string
+	CreatedAt   time.Time
+	UserID      int
 }
 
 type Delivery struct {
 	useCase      UseCase
-	jwtSecret    string
+	privateKey   *rsa.PrivateKey
+	publicKey    *rsa.PublicKey
 	jwkID        string
 	logger       *slog.Logger
 	clientID     string
@@ -57,13 +54,38 @@ type Delivery struct {
 	authSessions map[string]*AuthSession
 }
 
+// setupRSAKeys генерирует новую пару RSA ключей
+func setupRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
+	// Генерируем приватный ключ размером 2048 бит
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate RSA key: %w", err)
+	}
+
+	// Проверяем корректность ключа
+	if err := privateKey.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("failed to validate RSA key: %w", err)
+	}
+
+	// Публичный ключ извлекается из приватного
+	publicKey := &privateKey.PublicKey
+
+	return privateKey, publicKey, nil
+}
+
 func New(
 	useCase UseCase,
 	logger *slog.Logger,
 ) *Delivery {
+	privateKey, publicKey, err := setupRSAKeys()
+	if err != nil {
+		return nil
+	}
+
 	return &Delivery{
 		useCase:      useCase,
-		jwtSecret:    "super-secret-jwt",
+		privateKey:   privateKey,
+		publicKey:    publicKey,
 		jwkID:        "jwk-id",
 		logger:       logger,
 		clientID:     "car-rental-client-id",
@@ -84,7 +106,7 @@ func (d *Delivery) AddHandlers(router fiber.Router) {
 	router.Get("/me", d.me)
 
 	// other
-	router.Post("/authorize", d.Authorize)
+	router.Get("/authorize", d.Authorize)
 	router.Post("/register", d.signup)
 
 	router.Get("/login", d.handleLoginPage)
@@ -108,7 +130,8 @@ func (d *Delivery) handleToken(c *fiber.Ctx) error {
 	code := c.FormValue("code")
 	redirectURI := c.FormValue("redirect_uri")
 	clientID := c.FormValue("client_id")
-	clientSecret := c.FormValue("client_secret")
+	//clientSecret := c.FormValue("client_secret")
+	_ = c.FormValue("client_secret")
 
 	if grantType != "authorization_code" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -127,7 +150,7 @@ func (d *Delivery) handleToken(c *fiber.Ctx) error {
 	}
 
 	// Проверяем client credentials
-	if clientID != authCode.ClientID || clientSecret != d.jwtSecret {
+	if clientID != authCode.ClientID {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error":             "invalid_client",
 			"error_description": "Неверные учетные данные клиента",
@@ -142,7 +165,7 @@ func (d *Delivery) handleToken(c *fiber.Ctx) error {
 		})
 	}
 
-	// Генерируем access token и id token
+	// Генерируем id token
 	user, err := d.useCase.GetByID(c.Context(), authCode.UserID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -151,19 +174,10 @@ func (d *Delivery) handleToken(c *fiber.Ctx) error {
 		})
 	}
 
-	scopes := strings.Split(authCode.Scope, " ")
-	accessToken, err := d.generateAccessToken(user, authCode.ClientID, scopes)
+	idToken, err := d.generateIDToken(user, authCode.ClientID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":             "server_error",
-			"error_description": "Ошибка генерации токена",
-		})
-	}
-
-	idToken, err := d.generateIDToken(user, authCode.ClientID, authCode.Nonce)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":             "server_error",
+			"error":             "server_error" + err.Error(),
 			"error_description": "Ошибка генерации ID токена",
 		})
 	}
@@ -171,13 +185,12 @@ func (d *Delivery) handleToken(c *fiber.Ctx) error {
 	// Удаляем использованный код
 	delete(authCodes, code)
 
-	// Возвращаем токены
+	// Возвращаем токен
 	return c.JSON(fiber.Map{
-		"access_token": accessToken,
-		"token_type":   "Bearer",
-		"expires_in":   3600,
-		"id_token":     idToken,
-		"scope":        authCode.Scope,
+		"token_type": "Bearer",
+		"expires_in": 86400,
+		"id_token":   idToken,
+		"scope":      authCode.Scope,
 	})
 }
 
@@ -191,21 +204,11 @@ func (d *Delivery) handleCallback(c *fiber.Ctx) error {
 		})
 	}
 
-	// Если есть ошибка от провайдера
-	if req.Error != "" {
-		return c.Status(fiber.StatusBadRequest).JSON(CallbackResponse{
-			Error:            req.Error,
-			ErrorDescription: getErrorDescription(req.Error),
-			State:            req.State,
-		})
-	}
-
 	// Проверяем обязательные параметры
 	if req.Code == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(CallbackResponse{
 			Error:            "invalid_request",
 			ErrorDescription: "Отсутствует код авторизации",
-			State:            req.State,
 		})
 	}
 
@@ -215,7 +218,6 @@ func (d *Delivery) handleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(CallbackResponse{
 			Error:            "invalid_grant",
 			ErrorDescription: "Неверный или устаревший код авторизации",
-			State:            req.State,
 		})
 	}
 
@@ -225,23 +227,38 @@ func (d *Delivery) handleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(CallbackResponse{
 			Error:            "invalid_grant",
 			ErrorDescription: "Код авторизации истек",
-			State:            req.State,
 		})
 	}
 
-	// Формируем успешный ответ
-	response := CallbackResponse{
-		Code:  req.Code,
-		State: req.State,
+	// =====
+	// Генерируем id token
+	user, err := d.useCase.GetByID(c.Context(), authCode.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":             "server_error",
+			"error_description": "Пользователь не найден",
+		})
 	}
 
-	// В реальном приложении здесь обычно:
-	// 1. Обмениваем code на access token (вызываем /token)
-	// 2. Получаем информацию о пользователе (вызываем /userinfo)
-	// 3. Создаем сессию пользователя в своем приложении
+	idToken, err := d.generateIDToken(user, authCode.ClientID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":             "server_error" + err.Error(),
+			"error_description": "Ошибка генерации ID токена",
+		})
+	}
 
-	// Для демонстрации просто возвращаем JSON с кодом
-	return c.JSON(response)
+	// Удаляем использованный код
+	delete(authCodes, req.Code)
+
+	// Возвращаем токен
+	return c.JSON(fiber.Map{
+		"token_type": "Bearer",
+		"expires_in": 3600,
+		"id_token":   idToken,
+		"scope":      authCode.Scope,
+	})
+	// =====
 }
 
 // Вспомогательная функция для получения описания ошибки
@@ -267,7 +284,7 @@ func getErrorDescription(errorCode string) string {
 }
 
 func (d *Delivery) Authorize(c *fiber.Ctx) error {
-	var req models.AuthRequest
+	var req models.AuthorizeRequest
 	if err := c.QueryParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":             "invalid_request",
@@ -290,22 +307,22 @@ func (d *Delivery) Authorize(c *fiber.Ctx) error {
 		})
 	}
 
-	// Проверка redirect_uri
-	if req.RedirectURI != "" {
-		validRedirect := false
-		if d.redirectURI == req.RedirectURI {
-			validRedirect = true
-		}
-
-		if !validRedirect {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":             "invalid_request",
-				"error_description": "Неверный redirect_uri",
-			})
-		}
-	} else {
-		req.RedirectURI = d.redirectURI
-	}
+	//// Проверка redirect_uri
+	//if req.RedirectURI != "" {
+	//	validRedirect := false
+	//	if d.redirectURI == req.RedirectURI {
+	//		validRedirect = true
+	//	}
+	//
+	//	if !validRedirect {
+	//		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+	//			"error":             "invalid_request",
+	//			"error_description": "Неверный redirect_uri",
+	//		})
+	//	}
+	//} else {
+	//	req.RedirectURI = d.redirectURI
+	//}
 
 	// Проверка scope
 	scopes := strings.Split(req.Scope, " ")
@@ -341,11 +358,7 @@ func (d *Delivery) Authorize(c *fiber.Ctx) error {
 		ClientID:    req.ClientID,
 		RedirectURI: req.RedirectURI,
 		Scope:       req.Scope,
-		State:       req.State,
-		//Nonce:               req.Nonce,
-		//CodeChallenge:       req.CodeChallenge,
-		//CodeChallengeMethod: req.CodeChallengeMethod,
-		CreatedAt: time.Now(),
+		CreatedAt:   time.Now(),
 	}
 
 	d.authSessions[sessionID] = authSession
@@ -378,7 +391,6 @@ func (d *Delivery) handleLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("Неверная сессия")
 	}
 
-	// Простая проверка логина/пароля (в реальной системе используйте хеширование!)
 	params := usecase.SignInParams{
 		Username: username,
 		Password: password,
@@ -392,8 +404,34 @@ func (d *Delivery) handleLogin(c *fiber.Ctx) error {
 	// Сохраняем пользователя в сессии
 	session.UserID = user.ID
 
-	// Перенаправляем на страницу согласия
-	return c.Redirect(fmt.Sprintf("/api/v1/auth/consent?session_id=%s", sessionID))
+	// TODO
+	// Генерируем authorization code
+	authCode, err := generateRandomString(32)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":             "server_error",
+			"error_description": "Ошибка сервера",
+		})
+	}
+
+	// В реальной системе сохраняли бы код в базу данных
+	authCodes[authCode] = &AuthCode{
+		Code:        authCode,
+		ClientID:    session.ClientID,
+		RedirectURI: session.RedirectURI,
+		UserID:      session.UserID,
+		Scope:       session.Scope,
+		CreatedAt:   time.Now(),
+		ExpiresAt:   time.Now().Add(3 * time.Hour),
+	}
+
+	// Строим URL для redirect
+	redirectURL := fmt.Sprintf("%s?code=%s", session.RedirectURI, authCode)
+
+	// Удаляем сессию после использования
+	delete(d.authSessions, sessionID)
+
+	return c.Redirect(redirectURL)
 }
 
 // Новая функция для отображения страницы согласия
@@ -513,9 +551,6 @@ func (d *Delivery) handleConsent(c *fiber.Ctx) error {
 	// Если пользователь отказал
 	if action == "deny" {
 		errorURL := fmt.Sprintf("%s?error=access_denied", session.RedirectURI)
-		if session.State != "" {
-			errorURL += fmt.Sprintf("&state=%s", session.State)
-		}
 		return c.Redirect(errorURL)
 	}
 
@@ -535,16 +570,12 @@ func (d *Delivery) handleConsent(c *fiber.Ctx) error {
 		RedirectURI: session.RedirectURI,
 		UserID:      session.UserID,
 		Scope:       session.Scope,
-		Nonce:       session.Nonce,
 		CreatedAt:   time.Now(),
-		ExpiresAt:   time.Now().Add(10 * time.Minute), // Код действует 10 минут
+		ExpiresAt:   time.Now().Add(10 * time.Hour),
 	}
 
 	// Строим URL для redirect
 	redirectURL := fmt.Sprintf("%s?code=%s", session.RedirectURI, authCode)
-	if session.State != "" {
-		redirectURL += fmt.Sprintf("&state=%s", session.State)
-	}
 
 	// Удаляем сессию после использования
 	delete(d.authSessions, sessionID)
@@ -588,7 +619,6 @@ func (d *Delivery) handleLoginPage(c *fiber.Ctx) error {
 			</div>
 			<button type="submit">Войти</button>
 		</form>
-		<p>Доступные пользователи: admin/password, user/password</p>
 	</body>
 	</html>
 	`
@@ -675,21 +705,6 @@ func (d *Delivery) jwks(ctx *fiber.Ctx) error {
 }
 
 func (d *Delivery) GenerateToken(user models.User) (*models.TokenResponse, error) {
-	// Create access token
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":      user.ID,
-		"username": user.Username,
-		"email":    user.Email,
-		"role":     user.Role,
-		"exp":      time.Now().Add(time.Hour * 24).Unix(),
-		"iat":      time.Now().Unix(),
-	})
-
-	accessTokenString, err := accessToken.SignedString([]byte(d.jwtSecret))
-	if err != nil {
-		return nil, err
-	}
-
 	// Create ID token
 	idToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":      user.ID,
@@ -702,16 +717,15 @@ func (d *Delivery) GenerateToken(user models.User) (*models.TokenResponse, error
 		"aud":      "rsoi-client",
 	})
 
-	idTokenString, err := idToken.SignedString([]byte(d.jwtSecret))
+	idTokenString, err := idToken.SignedString([]byte("ddd"))
 	if err != nil {
 		return nil, err
 	}
 
 	return &models.TokenResponse{
-		AccessToken: accessTokenString,
-		TokenType:   "Bearer",
-		ExpiresIn:   86400,
-		IDToken:     idTokenString,
+		TokenType: "Bearer",
+		ExpiresIn: 86400,
+		IDToken:   idTokenString,
 	}, nil
 }
 
@@ -723,7 +737,7 @@ func (d *Delivery) GetJWKS() map[string]interface{} {
 			{
 				"kty": "oct",
 				"kid": d.jwkID,
-				"k":   base64.URLEncoding.EncodeToString([]byte(d.jwtSecret)),
+				"k":   base64.URLEncoding.EncodeToString([]byte("ddd")),
 				"alg": "HS256",
 				"use": "sig",
 			},

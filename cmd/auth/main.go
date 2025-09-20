@@ -16,9 +16,9 @@ import (
 	"github.com/lmittmann/tint"
 	"github.com/spf13/pflag"
 
-	"github.com/SlavaShagalov/car-rental/internal/auth/delivery"
-	"github.com/SlavaShagalov/car-rental/internal/auth/repository"
-	"github.com/SlavaShagalov/car-rental/internal/auth/usecase"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/delivery"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/repository"
+	"github.com/SlavaShagalov/car-rental/internal/oauth/usecase"
 	"github.com/SlavaShagalov/car-rental/internal/pkg/app"
 	pHasher "github.com/SlavaShagalov/car-rental/internal/pkg/hasher/bcrypt"
 	"github.com/SlavaShagalov/car-rental/pkg/migrations"

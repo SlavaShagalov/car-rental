@@ -7,9 +7,7 @@ import (
 
 // Структура для callback запроса
 type CallbackRequest struct {
-	Code  string `query:"code"`
-	State string `query:"state"`
-	Error string `query:"error"`
+	Code string `query:"code"`
 }
 
 // Структура для ответа callback

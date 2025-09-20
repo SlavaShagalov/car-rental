@@ -8,12 +8,11 @@ type TokenResponse struct {
 	IDToken      string `json:"id_token,omitempty"`
 }
 
-type AuthRequest struct {
+type AuthorizeRequest struct {
 	ResponseType string `query:"response_type" validate:"required"`
 	ClientID     string `query:"client_id" validate:"required"`
 	RedirectURI  string `query:"redirect_uri" validate:"required"`
 	Scope        string `query:"scope" validate:"required"`
-	State        string `query:"state"`
 }
 
 type TokenRequest struct {
